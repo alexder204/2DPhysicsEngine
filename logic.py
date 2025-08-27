@@ -6,6 +6,10 @@ app = Flask(__name__)
 CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 600
 
+DECAY_ENABLED = False   # default: no momentum loss
+DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
+GRAVITY_ENABLED = True
+
 class Vectors:
     def __init__(self, x=0, y=0):
         self.x, self.y = x, y
@@ -118,40 +122,62 @@ def move_body():
 @app.route("/step")
 def step():
     dt = 0.1
-    G = 50.0
+    GRAVITY_FORCE = 9.8  # downward acceleration
 
-    for i, a in enumerate(bodies):
-        for j, b in enumerate(bodies):
-            if i == j: continue
-            r_vec = b.position - a.position
-            dist = max(r_vec.magnitude(), 5.0)
-            force_mag = G * a.mass * b.mass / (dist * dist)
-            a.apply_force(r_vec.normalize() * force_mag)
-
+    # Update bodies
     for b in bodies:
+        # Apply simple downward gravity if enabled
+        if GRAVITY_ENABLED:
+            b.apply_force(Vectors(0, GRAVITY_FORCE * b.mass))
+
+        # Update velocity and position
         b.update(dt)
 
+        # Apply momentum loss if enabled
+        if DECAY_ENABLED:
+            b.velocity *= DECAY_FACTOR
+
+    # Resolve collisions between bodies
     for i in range(len(bodies)):
         for j in range(i + 1, len(bodies)):
             bodies[i].tech_with_tim_resolve(bodies[j])
 
+    # Keep bodies inside canvas
     for b in bodies:
         r = b.radius
         if b.position.x - r < 0:
-            b.position.x = r; b.velocity.x *= -1
+            b.position.x = r
+            b.velocity.x *= -1
         if b.position.x + r > CANVAS_WIDTH:
-            b.position.x = CANVAS_WIDTH - r; b.velocity.x *= -1
+            b.position.x = CANVAS_WIDTH - r
+            b.velocity.x *= -1
         if b.position.y - r < 0:
-            b.position.y = r; b.velocity.y *= -1
+            b.position.y = r
+            b.velocity.y *= -1
         if b.position.y + r > CANVAS_HEIGHT:
-            b.position.y = CANVAS_HEIGHT - r; b.velocity.y *= -1
+            b.position.y = CANVAS_HEIGHT - r
+            b.velocity.y *= -1
 
+    # Return updated positions
     return jsonify([{
         "x": b.position.x,
         "y": b.position.y,
         "mass": b.mass,
         "radius": b.radius
     } for b in bodies])
+
+
+@app.route("/toggle_decay", methods=["POST"])
+def toggle_decay():
+    global DECAY_ENABLED
+    DECAY_ENABLED = not DECAY_ENABLED
+    return jsonify(enabled=DECAY_ENABLED)
+
+@app.route("/toggle_gravity", methods=["POST"])
+def toggle_gravity():
+    global GRAVITY_ENABLED
+    GRAVITY_ENABLED = not GRAVITY_ENABLED
+    return jsonify(enabled=GRAVITY_ENABLED)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -4,12 +4,18 @@
   <meta charset="utf-8" />
   <title>Physics Grab Demo</title>
   <style>
-    body { margin: 0; background: #111; display: grid; place-items: center; height: 100vh; }
+    body { margin: 0; background: #111; display: grid; place-items: center; height: 100vh; flex-direction: column; }
     canvas { background: #111; display: block; box-shadow: 0 0 0 4px #fff inset; }
+    #controls { margin-top: 10px; }
+    button { padding: 6px 12px; font-size: 14px; }
   </style>
 </head>
 <body>
   <canvas id="canvas" width="800" height="600"></canvas>
+  <div id="controls">
+    <button id="toggleDecay">Toggle Momentum Loss</button>
+    <button id="toggleGravity">Toggle Gravity</button>
+  </div>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
