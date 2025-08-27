@@ -111,12 +111,17 @@ def move_body():
     idx = data.get("index")
     x, y = data.get("x"), data.get("y")
     vx, vy = data.get("vx"), data.get("vy")
-    if idx is not None and 0 <= idx < len(bodies):
-        bodies[idx].position = Vectors(x, y)
-        if vx is not None and vy is not None:
-            bodies[idx].velocity = Vectors(vx, vy)
+    mass = data.get("mass", 5)  # optional, default mass
+
+    if idx is not None:
+        if 0 <= idx < len(bodies):
+            bodies[idx].position = Vectors(x, y)
+            bodies[idx].velocity = Vectors(vx or 0, vy or 0)
         else:
-            bodies[idx].velocity = Vectors(0, 0)
+            # Append new body
+            new_body = Body(position=Vectors(x, y), velocity=Vectors(vx or 0, vy or 0), mass=mass)
+            bodies.append(new_body)
+
     return jsonify(success=True)
 
 @app.route("/step")
@@ -178,6 +183,16 @@ def toggle_gravity():
     global GRAVITY_ENABLED
     GRAVITY_ENABLED = not GRAVITY_ENABLED
     return jsonify(enabled=GRAVITY_ENABLED)
+
+# Keep a copy of initial bodies
+initial_bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass) for b in bodies]
+
+@app.route("/reset_bodies", methods=["POST"])
+def reset_bodies():
+    global bodies
+    # Reset bodies to the original ones
+    bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass) for b in initial_bodies]
+    return jsonify(success=True)
 
 if __name__ == "__main__":
     app.run(debug=True)
