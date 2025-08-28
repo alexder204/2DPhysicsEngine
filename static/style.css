@@ -1,0 +1,23 @@
+body { 
+    margin: 0; 
+    background: #111; 
+    display: grid; 
+    place-items: center; 
+    height: 100vh; 
+    flex-direction: column; 
+}
+
+canvas { 
+    background: #111; 
+    display: block; 
+    box-shadow: 0 0 0 4px #fff inset; 
+}
+
+#controls { 
+    margin-top: 10px; 
+}
+
+button { 
+    padding: 6px 12px; 
+    font-size: 14px; 
+}

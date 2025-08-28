@@ -2,7 +2,7 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 // ---- Constants ----
-const SPAWN_COOLDOWN_MS = 2000;
+const SPAWN_COOLDOWN_MS = 0; // 2000 ms = 2 second cooldown
 
 // ---- State ----
 let bodies = [];
@@ -47,7 +47,7 @@ function draw() {
   });
 }
 
-// ---- Mouse events ----
+// ---- Mouse Click ----
 canvas.addEventListener("mousedown", e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
@@ -66,6 +66,7 @@ canvas.addEventListener("mousedown", e => {
   velocityWhileDragging = { x: 0, y: 0 };
 });
 
+// --- Mouse Move ---
 canvas.addEventListener("mousemove", async e => {
   if (selectedIndex === null) return;
 
@@ -88,6 +89,7 @@ canvas.addEventListener("mousemove", async e => {
   draw();
 });
 
+// --- Mouse Unclick ---
 canvas.addEventListener("mouseup", async () => {
   if (selectedIndex !== null) {
     const throwFactor = 6.0;
@@ -147,7 +149,7 @@ async function loop() {
 
 loop();
 
-// ---- Buttons ----
+// ---- Momentum Button ----
 document.getElementById("toggleDecay").addEventListener("click", async () => {
   const res = await fetch("/toggle_decay", { method: "POST" });
   const data = await res.json();
@@ -155,6 +157,7 @@ document.getElementById("toggleDecay").addEventListener("click", async () => {
   document.getElementById("decayState").style.color = data.enabled ? "lime" : "red";
 });
 
+// --- Gravity Button ---
 document.getElementById("toggleGravity").addEventListener("click", async () => {
   const res = await fetch("/toggle_gravity", { method: "POST" });
   const data = await res.json();
@@ -162,11 +165,13 @@ document.getElementById("toggleGravity").addEventListener("click", async () => {
   document.getElementById("gravityState").style.color = data.enabled ? "lime" : "red";
 });
 
+// --- Reset Button ---
 document.getElementById("resetBodies").addEventListener("click", async () => {
   await fetch("/reset_bodies", { method: "POST" });
   await fetchBodies();  // reload bodies from server
 });
 
+// --- Status Of Buttons ---
 async function fetchStatus() {
   const res = await fetch("/status");
   const data = await res.json();

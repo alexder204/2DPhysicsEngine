@@ -3,13 +3,18 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+# --- Gamezone ---
 CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 600
 
+# --- Momentum ---
 DECAY_ENABLED = False   # default: no momentum loss
 DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
+
+# --- Gravity ---
 GRAVITY_ENABLED = True
 
+# --- Vector Class ---
 class Vectors:
     def __init__(self, x=0, y=0):
         self.x, self.y = x, y
@@ -39,6 +44,7 @@ class Vectors:
     def __repr__(self): 
         return f"V({self.x:.2f},{self.y:.2f})"
 
+# --- Body Class ---
 class Body:
     def __init__(self, position=None, velocity=None, mass=1.0):
         self.position = position or Vectors(0, 0)
@@ -48,7 +54,8 @@ class Body:
         self.force = Vectors(0, 0)
         self.radius = self.mass * 4.0
 
-    def apply_force(self, f): self.force += f
+    def apply_force(self, f): 
+        self.force += f
 
     def update(self, dt=1.0):
         self.acceleration = self.force / self.mass
@@ -86,6 +93,7 @@ class Body:
         self.velocity = (t * v1t) + (n * v1n_prime)
         other.velocity = (t * v2t) + (n * v2n_prime)
 
+# --- Starting Bodies ---
 bodies = [
     Body(position=Vectors(200, 200), mass=8),
     Body(position=Vectors(400, 300), mass=6),
@@ -96,6 +104,7 @@ bodies = [
 def index():
     return render_template("index.html")
 
+# --- Keep Information On Bodies ---
 @app.route("/bodies")
 def get_bodies():
     return jsonify([{
@@ -105,6 +114,7 @@ def get_bodies():
         "radius": b.radius
     } for b in bodies])
 
+# --- Moving Bodies ---
 @app.route("/move", methods=["POST"])
 def move_body():
     data = request.json
@@ -124,6 +134,7 @@ def move_body():
 
     return jsonify(success=True)
 
+# --- Update Frames ---
 @app.route("/step")
 def step():
     dt = 0.1
@@ -142,7 +153,7 @@ def step():
         if DECAY_ENABLED:
             b.velocity *= DECAY_FACTOR
 
-    # Resolve collisions between bodies
+    # Collisions between bodies
     for i in range(len(bodies)):
         for j in range(i + 1, len(bodies)):
             bodies[i].tech_with_tim_resolve(bodies[j])
@@ -171,13 +182,14 @@ def step():
         "radius": b.radius
     } for b in bodies])
 
-
+# --- Momentum Toggle Button ---
 @app.route("/toggle_decay", methods=["POST"])
 def toggle_decay():
     global DECAY_ENABLED
     DECAY_ENABLED = not DECAY_ENABLED
     return jsonify(enabled=DECAY_ENABLED)
 
+# --- Gravity Toggle Button ---
 @app.route("/toggle_gravity", methods=["POST"])
 def toggle_gravity():
     global GRAVITY_ENABLED
@@ -187,6 +199,7 @@ def toggle_gravity():
 # Keep a copy of initial bodies
 initial_bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass) for b in bodies]
 
+# --- Reset Button ---
 @app.route("/reset_bodies", methods=["POST"])
 def reset_bodies():
     global bodies
@@ -194,6 +207,7 @@ def reset_bodies():
     bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass) for b in initial_bodies]
     return jsonify(success=True)
 
+# --- Status Of Buttons ---
 @app.route("/status")
 def status():
     return jsonify({
