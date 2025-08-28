@@ -13,11 +13,15 @@
 <body>
   <canvas id="canvas" width="800" height="600"></canvas>
   <div id="controls">
-    <button id="toggleDecay">Toggle Momentum Loss</button>
-    <button id="toggleGravity">Toggle Gravity</button>
-    <button id="spawnObject">Spawn New Object</button>
-    <button id="resetBodies">Reset</button>
-  </div>
+  <button id="toggleDecay">Toggle Momentum Loss</button>
+  <span id="decayState">OFF</span>
+  <br>
+  <button id="toggleGravity">Toggle Gravity</button>
+  <span id="gravityState">ON</span>
+  <br>
+  <button id="spawnObject">Spawn New Object</button>
+  <button id="resetBodies">Reset</button>
+</div>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

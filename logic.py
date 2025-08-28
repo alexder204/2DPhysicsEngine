@@ -194,5 +194,12 @@ def reset_bodies():
     bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass) for b in initial_bodies]
     return jsonify(success=True)
 
+@app.route("/status")
+def status():
+    return jsonify({
+        "decay": DECAY_ENABLED,
+        "gravity": GRAVITY_ENABLED
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)

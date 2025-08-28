@@ -151,20 +151,33 @@ loop();
 document.getElementById("toggleDecay").addEventListener("click", async () => {
   const res = await fetch("/toggle_decay", { method: "POST" });
   const data = await res.json();
-  alert(`Momentum loss is now ${data.enabled ? "ON" : "OFF"}`);
+  document.getElementById("decayState").textContent = data.enabled ? "ON" : "OFF";
+  document.getElementById("decayState").style.color = data.enabled ? "lime" : "red";
 });
 
 document.getElementById("toggleGravity").addEventListener("click", async () => {
   const res = await fetch("/toggle_gravity", { method: "POST" });
   const data = await res.json();
-  alert(`Gravity is now ${data.enabled ? "ON" : "OFF"}`);
+  document.getElementById("gravityState").textContent = data.enabled ? "ON" : "OFF";
+  document.getElementById("gravityState").style.color = data.enabled ? "lime" : "red";
 });
 
 document.getElementById("resetBodies").addEventListener("click", async () => {
   await fetch("/reset_bodies", { method: "POST" });
   await fetchBodies();  // reload bodies from server
-  alert("Objects have been reset!");
 });
+
+async function fetchStatus() {
+  const res = await fetch("/status");
+  const data = await res.json();
+
+  document.getElementById("decayState").textContent = data.decay ? "ON" : "OFF";
+  document.getElementById("decayState").style.color = data.decay ? "lime" : "red";
+
+  document.getElementById("gravityState").textContent = data.gravity ? "ON" : "OFF";
+  document.getElementById("gravityState").style.color = data.gravity ? "lime" : "red";
+}
+fetchStatus();
 
 // ---- Spawn object button ----
 document.getElementById("spawnObject").addEventListener("click", async () => {
