@@ -13,6 +13,7 @@ DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
 
 # --- Gravity ---
 GRAVITY_ENABLED = True
+GRAVITY_FORCE = 9.8
 
 # --- Vector Class ---
 class Vectors:
@@ -137,23 +138,25 @@ def move_body():
 # --- Update Frames ---
 @app.route("/step")
 def step():
+    global bodies, GRAVITY_FORCE, DECAY_FACTOR
     dt = 0.1
-    GRAVITY_FORCE = 9.8  # downward acceleration
+    min_bounce = 0.01  # treat very small velocities as zero
+    bounce_factor = -0.9 if DECAY_ENABLED else -1.0
 
     # Update bodies
     for b in bodies:
-        # Apply simple downward gravity if enabled
+        # Apply gravity
         if GRAVITY_ENABLED:
             b.apply_force(Vectors(0, GRAVITY_FORCE * b.mass))
 
-        # Update velocity and position
+        # Update physics
         b.update(dt)
 
-        # Apply momentum loss if enabled
+        # Apply momentum decay
         if DECAY_ENABLED:
             b.velocity *= DECAY_FACTOR
 
-    # Collisions between bodies
+    # Resolve collisions between bodies
     for i in range(len(bodies)):
         for j in range(i + 1, len(bodies)):
             bodies[i].tech_with_tim_resolve(bodies[j])
@@ -161,18 +164,26 @@ def step():
     # Keep bodies inside canvas
     for b in bodies:
         r = b.radius
-        if b.position.x - r < 0:
-            b.position.x = r
-            b.velocity.x *= -1
-        if b.position.x + r > CANVAS_WIDTH:
-            b.position.x = CANVAS_WIDTH - r
-            b.velocity.x *= -1
-        if b.position.y - r < 0:
-            b.position.y = r
-            b.velocity.y *= -1
+
+        # Floor
         if b.position.y + r > CANVAS_HEIGHT:
             b.position.y = CANVAS_HEIGHT - r
-            b.velocity.y *= -1
+            b.velocity.y = b.velocity.y * bounce_factor if abs(b.velocity.y) > min_bounce else 0
+
+        # Ceiling
+        if b.position.y - r < 0:
+            b.position.y = r
+            b.velocity.y = b.velocity.y * bounce_factor if abs(b.velocity.y) > min_bounce else 0
+
+        # Left wall
+        if b.position.x - r < 0:
+            b.position.x = r
+            b.velocity.x = b.velocity.x * bounce_factor if abs(b.velocity.x) > min_bounce else 0
+
+        # Right wall
+        if b.position.x + r > CANVAS_WIDTH:
+            b.position.x = CANVAS_WIDTH - r
+            b.velocity.x = b.velocity.x * bounce_factor if abs(b.velocity.x) > min_bounce else 0
 
     # Return updated positions
     return jsonify([{
@@ -214,6 +225,26 @@ def status():
         "decay": DECAY_ENABLED,
         "gravity": GRAVITY_ENABLED
     })
+
+# --- Set Decay Factor ---
+@app.route("/set_decay_factor", methods=["POST"])
+def set_decay_factor():
+    global DECAY_FACTOR
+    data = request.json
+    slider_value = float(data.get("slider", 0))  # get the slider from the request
+
+    # Map slider to decay factor (0 = no decay, 1 = max decay)
+    DECAY_FACTOR = 1.0 - slider_value * 0.05  # tweak 0.05 for max per-frame decay
+
+    return jsonify(success=True, factor=DECAY_FACTOR)
+
+# --- Set Gravity Force ---
+@app.route("/set_gravity_force", methods=["POST"])
+def set_gravity_force():
+    global GRAVITY_FORCE
+    data = request.json
+    GRAVITY_FORCE = float(data.get("gravity", 9.8))
+    return jsonify(success=True, gravity=GRAVITY_FORCE)
 
 if __name__ == "__main__":
     app.run(debug=True)

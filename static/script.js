@@ -150,20 +150,50 @@ async function loop() {
 loop();
 
 // ---- Momentum Button ----
+const decaySlider = document.getElementById("decaySlider");
 document.getElementById("toggleDecay").addEventListener("click", async () => {
   const res = await fetch("/toggle_decay", { method: "POST" });
   const data = await res.json();
+
   document.getElementById("decayState").textContent = data.enabled ? "ON" : "OFF";
   document.getElementById("decayState").style.color = data.enabled ? "lime" : "red";
+
+  // Enable/disable slider
+  decaySlider.disabled = !data.enabled;
 });
 
-// --- Gravity Button ---
+// ---- Gravity Button ----
+const gravitySlider = document.getElementById("gravitySlider");
 document.getElementById("toggleGravity").addEventListener("click", async () => {
   const res = await fetch("/toggle_gravity", { method: "POST" });
   const data = await res.json();
+
   document.getElementById("gravityState").textContent = data.enabled ? "ON" : "OFF";
   document.getElementById("gravityState").style.color = data.enabled ? "lime" : "red";
+
+  // Enable/disable slider
+  gravitySlider.disabled = !data.enabled;
 });
+
+// ---- Slider change listeners ----
+decaySlider.addEventListener("input", async () => {
+  const value = parseFloat(decaySlider.value);
+  await fetch("/set_decay_factor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ factor: value })
+  });
+});
+
+gravitySlider.addEventListener("input", async () => {
+  const value = parseFloat(gravitySlider.value);
+  await fetch("/set_gravity_force", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gravity: value })
+  });
+});
+
 
 // --- Reset Button ---
 document.getElementById("resetBodies").addEventListener("click", async () => {

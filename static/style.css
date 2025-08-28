@@ -21,3 +21,15 @@ button {
     padding: 6px 12px; 
     font-size: 14px; 
 }
+
+input[type=range] {
+  margin-left: 10px;
+  vertical-align: middle;
+  opacity: 1.0;
+  transition: opacity 0.3s;
+}
+
+input[type=range]:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
