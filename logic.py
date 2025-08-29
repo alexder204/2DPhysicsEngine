@@ -15,6 +15,8 @@ DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
 GRAVITY_ENABLED = True
 GRAVITY_FORCE = 9.8
 
+ELASTICITY = 1.0
+
 # --- Vector Class ---
 class Vectors:
     def __init__(self, x=0, y=0):
@@ -88,8 +90,10 @@ class Body:
         v2t = other.velocity.dot(t)
 
         m1, m2 = self.mass, other.mass
-        v1n_prime = (v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)
-        v2n_prime = (v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)
+
+        # Apply elasticity factor here
+        v1n_prime = ((v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)) * ELASTICITY
+        v2n_prime = ((v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)) * ELASTICITY
 
         self.velocity = (t * v1t) + (n * v1n_prime)
         other.velocity = (t * v2t) + (n * v2n_prime)
@@ -168,22 +172,34 @@ def step():
         # Floor
         if b.position.y + r > CANVAS_HEIGHT:
             b.position.y = CANVAS_HEIGHT - r
-            b.velocity.y = b.velocity.y * bounce_factor if abs(b.velocity.y) > min_bounce else 0
+            if abs(b.velocity.y) > min_bounce:
+                b.velocity.y = -b.velocity.y * ELASTICITY
+            else:
+                b.velocity.y = 0
 
         # Ceiling
         if b.position.y - r < 0:
             b.position.y = r
-            b.velocity.y = b.velocity.y * bounce_factor if abs(b.velocity.y) > min_bounce else 0
+            if abs(b.velocity.y) > min_bounce:
+                b.velocity.y = -b.velocity.y * ELASTICITY
+            else:
+                b.velocity.y = 0
 
         # Left wall
         if b.position.x - r < 0:
             b.position.x = r
-            b.velocity.x = b.velocity.x * bounce_factor if abs(b.velocity.x) > min_bounce else 0
+            if abs(b.velocity.x) > min_bounce:
+                b.velocity.x = -b.velocity.x * ELASTICITY
+            else:
+                b.velocity.x = 0
 
         # Right wall
         if b.position.x + r > CANVAS_WIDTH:
             b.position.x = CANVAS_WIDTH - r
-            b.velocity.x = b.velocity.x * bounce_factor if abs(b.velocity.x) > min_bounce else 0
+            if abs(b.velocity.x) > min_bounce:
+                b.velocity.x = -b.velocity.x * ELASTICITY
+            else:
+                b.velocity.x = 0
 
     # Return updated positions
     return jsonify([{
@@ -245,6 +261,14 @@ def set_gravity_force():
     data = request.json
     GRAVITY_FORCE = float(data.get("gravity", 9.8))
     return jsonify(success=True, gravity=GRAVITY_FORCE)
+
+@app.route("/set_elasticity", methods=["POST"])
+def set_elasticity():
+    global ELASTICITY
+    data = request.json
+    ELASTICITY = float(data.get("elasticity", 1.0))
+    ELASTICITY = max(0.0, min(1.0, ELASTICITY))  # clamp between 0 and 1
+    return jsonify(success=True, elasticity=ELASTICITY)
 
 if __name__ == "__main__":
     app.run(debug=True)

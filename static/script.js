@@ -194,6 +194,15 @@ gravitySlider.addEventListener("input", async () => {
   });
 });
 
+const elasticityInput = document.getElementById("elasticityInput");
+elasticityInput.addEventListener("input", async () => {
+  const value = parseFloat(elasticityInput.value);
+  await fetch("/set_elasticity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ elasticity: value })
+  });
+});
 
 // --- Reset Button ---
 document.getElementById("resetBodies").addEventListener("click", async () => {
@@ -226,7 +235,8 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
 
   let newX = Math.random() * canvas.width;
   let newY = Math.random() * canvas.height;
-  const mass = 4 + Math.random() * 6;
+  const massInput = document.getElementById("massInput");
+  const mass = parseFloat(massInput.value) || 10; // default to 10 if input invalid
   const radius = mass * 4;
 
   // Push out of overlaps
