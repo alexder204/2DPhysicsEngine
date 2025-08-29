@@ -15,7 +15,7 @@ DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
 GRAVITY_ENABLED = True
 GRAVITY_FORCE = 9.8
 
-ELASTICITY = 1.0
+DEFAULT_ELASTICITY = 1.0
 
 # --- Vector Class ---
 class Vectors:
@@ -49,13 +49,14 @@ class Vectors:
 
 # --- Body Class ---
 class Body:
-    def __init__(self, position=None, velocity=None, mass=1.0):
+    def __init__(self, position=None, velocity=None, mass=1.0, elasticity=1.0):
         self.position = position or Vectors(0, 0)
         self.velocity = velocity or Vectors(0, 0)
         self.acceleration = Vectors(0, 0)
         self.mass = float(mass)
         self.force = Vectors(0, 0)
         self.radius = self.mass * 4.0
+        self.elasticity = elasticity
 
     def apply_force(self, f): 
         self.force += f
@@ -92,8 +93,11 @@ class Body:
         m1, m2 = self.mass, other.mass
 
         # Apply elasticity factor here
-        v1n_prime = ((v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)) * ELASTICITY
-        v2n_prime = ((v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)) * ELASTICITY
+        e = (self.elasticity + other.elasticity) / 2.0  
+
+        v1n_prime = ((v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)) * e
+        v2n_prime = ((v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)) * e
+
 
         self.velocity = (t * v1t) + (n * v1n_prime)
         other.velocity = (t * v2t) + (n * v2n_prime)
@@ -127,6 +131,7 @@ def move_body():
     x, y = data.get("x"), data.get("y")
     vx, vy = data.get("vx"), data.get("vy")
     mass = data.get("mass", 5)  # optional, default mass
+    elasticity=data.get("elasticity", DEFAULT_ELASTICITY)
 
     if idx is not None:
         if 0 <= idx < len(bodies):
@@ -134,7 +139,7 @@ def move_body():
             bodies[idx].velocity = Vectors(vx or 0, vy or 0)
         else:
             # Append new body
-            new_body = Body(position=Vectors(x, y), velocity=Vectors(vx or 0, vy or 0), mass=mass)
+            new_body = Body(position=Vectors(x, y), velocity=Vectors(vx or 0, vy or 0), mass=mass, elasticity=elasticity)
             bodies.append(new_body)
 
     return jsonify(success=True)
@@ -158,7 +163,9 @@ def step():
 
         # Apply momentum decay
         if DECAY_ENABLED:
-            b.velocity *= DECAY_FACTOR
+            decay_per_frame = DECAY_FACTOR ** dt
+            b.velocity *= decay_per_frame
+
 
     # Resolve collisions between bodies
     for i in range(len(bodies)):
@@ -173,7 +180,7 @@ def step():
         if b.position.y + r > CANVAS_HEIGHT:
             b.position.y = CANVAS_HEIGHT - r
             if abs(b.velocity.y) > min_bounce:
-                b.velocity.y = -b.velocity.y * ELASTICITY
+                b.velocity.y = -b.velocity.y * b.elasticity
             else:
                 b.velocity.y = 0
 
@@ -181,7 +188,7 @@ def step():
         if b.position.y - r < 0:
             b.position.y = r
             if abs(b.velocity.y) > min_bounce:
-                b.velocity.y = -b.velocity.y * ELASTICITY
+                b.velocity.y = -b.velocity.y * b.elasticity
             else:
                 b.velocity.y = 0
 
@@ -189,7 +196,7 @@ def step():
         if b.position.x - r < 0:
             b.position.x = r
             if abs(b.velocity.x) > min_bounce:
-                b.velocity.x = -b.velocity.x * ELASTICITY
+                b.velocity.x = -b.velocity.x * b.elasticity  # ✅ fix
             else:
                 b.velocity.x = 0
 
@@ -197,7 +204,7 @@ def step():
         if b.position.x + r > CANVAS_WIDTH:
             b.position.x = CANVAS_WIDTH - r
             if abs(b.velocity.x) > min_bounce:
-                b.velocity.x = -b.velocity.x * ELASTICITY
+                b.velocity.x = -b.velocity.x * b.elasticity  # ✅ fix
             else:
                 b.velocity.x = 0
 
@@ -250,7 +257,7 @@ def set_decay_factor():
     slider_value = float(data.get("slider", 0))  # get the slider from the request
 
     # Map slider to decay factor (0 = no decay, 1 = max decay)
-    DECAY_FACTOR = 1.0 - slider_value * 0.05  # tweak 0.05 for max per-frame decay
+    DECAY_FACTOR = 0.99 - slider_value * 0.1 # tweak 0.05 for max per-frame decay
 
     return jsonify(success=True, factor=DECAY_FACTOR)
 
@@ -264,11 +271,15 @@ def set_gravity_force():
 
 @app.route("/set_elasticity", methods=["POST"])
 def set_elasticity():
-    global ELASTICITY
-    data = request.json
-    ELASTICITY = float(data.get("elasticity", 1.0))
-    ELASTICITY = max(0.0, min(1.0, ELASTICITY))  # clamp between 0 and 1
-    return jsonify(success=True, elasticity=ELASTICITY)
+    global DEFAULT_ELASTICITY
+    data = request.get_json()
+    try:
+        new_elasticity = float(data.get("elasticity", 1.0))
+        new_elasticity = max(0.0, min(1.0, new_elasticity))
+        DEFAULT_ELASTICITY = new_elasticity
+        return jsonify({"status": "ok", "default_elasticity": DEFAULT_ELASTICITY})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)

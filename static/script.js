@@ -31,22 +31,6 @@ async function fetchBodies() {
 
 fetchBodies();
 
-// ---- Drawing ----
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  bodies.forEach((b, i) => {
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
-    ctx.fill();
-
-    ctx.strokeStyle = i === selectedIndex ? "yellow" : "#3cf";
-    ctx.lineWidth = i === selectedIndex ? 2 : 1;
-    ctx.stroke();
-  });
-}
-
 // ---- Mouse Click ----
 canvas.addEventListener("mousedown", e => {
   const rect = canvas.getBoundingClientRect();
@@ -67,7 +51,7 @@ canvas.addEventListener("mousedown", e => {
 });
 
 // --- Mouse Move ---
-canvas.addEventListener("mousemove", async e => {
+canvas.addEventListener("mousemove", e => {
   if (selectedIndex === null) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -77,14 +61,16 @@ canvas.addEventListener("mousemove", async e => {
   velocityWhileDragging = { x: x - lastMouse.x, y: y - lastMouse.y };
   lastMouse = { x, y };
 
+  // Update locally for smooth dragging
   bodies[selectedIndex].x = x;
   bodies[selectedIndex].y = y;
 
-  await fetch("/move", {
+  // Fire-and-forget server update (async, non-blocking)
+  fetch("/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ index: selectedIndex, x, y })
-  });
+  }).catch(console.error);
 
   draw();
 });
@@ -181,7 +167,7 @@ decaySlider.addEventListener("input", async () => {
   await fetch("/set_decay_factor", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ factor: value })
+    body: JSON.stringify({ slider: value })
   });
 });
 
@@ -275,6 +261,7 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
   let newY = Math.random() * canvas.height;
   const massInput = document.getElementById("massInput");
   const mass = parseFloat(massInput.value) || 10; // default to 10 if input invalid
+  const elasticity = parseFloat(document.getElementById("elasticityInput").value) || 1.0;
   const radius = mass * 4;
 
   // Push out of overlaps
@@ -303,9 +290,8 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
       y: newY,
       vx: 0,
       vy: 0,
-      mass: mass
+      mass: mass,
+      elasticity: elasticity
     })
   });
-
-  draw();
 });
