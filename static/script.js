@@ -223,6 +223,44 @@ async function fetchStatus() {
 }
 fetchStatus();
 
+let pulseTime = 0; // global for glow pulse
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  pulseTime += 0.05; // increase for pulsating effect
+  const pulse = (Math.sin(pulseTime) + 1) / 2; // 0 → 1
+
+  bodies.forEach((b, i) => {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+
+    if (i === selectedIndex) {
+      // glowing aura
+      ctx.save();
+      const glowRadius = b.radius + 5 + pulse * 5;
+      const gradient = ctx.createRadialGradient(b.x, b.y, b.radius, b.x, b.y, glowRadius);
+      gradient.addColorStop(0, `rgba(255,255,0,0.8)`); // bright center
+      gradient.addColorStop(1, `rgba(255,255,0,0)`);   // fade out
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      ctx.strokeStyle = "yellow";
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = "#3cf";
+      ctx.lineWidth = 1;
+    }
+
+    ctx.stroke();
+  });
+}
+
 // ---- Spawn object button ----
 document.getElementById("spawnObject").addEventListener("click", async () => {
   if (spawnCooldown) {
