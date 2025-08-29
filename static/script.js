@@ -29,6 +29,25 @@ async function fetchBodies() {
   draw();
 }
 
+const sizeInput = document.getElementById("sizeInput");
+
+sizeInput.addEventListener("input", async () => {
+  if (selectedIndex === null) return;
+  const newSize = parseFloat(sizeInput.value);
+
+  bodies[selectedIndex].size = newSize;
+  bodies[selectedIndex].radius = newSize * 4;
+
+  // Send to server
+  await fetch("/set_size", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: selectedIndex, size: newSize })
+  });
+
+  draw();
+});
+
 fetchBodies();
 
 // ---- Mouse Click ----
@@ -44,6 +63,10 @@ canvas.addEventListener("mousedown", e => {
       selectedIndex = i;
       break;
     }
+  }
+
+  if (selectedIndex !== null) {
+    sizeInput.value = bodies[selectedIndex].radius / 4;
   }
 
   lastMouse = { x: mx, y: my };
@@ -125,7 +148,17 @@ canvas.addEventListener("mouseleave", async () => {
 async function loop() {
   try {
     const res = await fetch("/step");
-    bodies = await res.json();
+    let serverBodies = await res.json();
+
+    if (selectedIndex !== null) {
+      // Keep the dragged ball at local position
+      serverBodies[selectedIndex].x = bodies[selectedIndex].x;
+      serverBodies[selectedIndex].y = bodies[selectedIndex].y;
+      serverBodies[selectedIndex].vx = 0;
+      serverBodies[selectedIndex].vy = 0;
+    }
+
+    bodies = serverBodies;
     draw();
   } catch (e) {
     console.error(e);
@@ -270,7 +303,8 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
   const massInput = document.getElementById("massInput");
   const mass = parseFloat(massInput.value) || 10; // default to 10 if input invalid
   const elasticity = parseFloat(document.getElementById("elasticityInput").value) || 1.0;
-  const radius = mass * 4;
+  const size = parseFloat(document.getElementById("sizeInput").value) || 10;
+  const radius = size * 4;
 
   const type = document.getElementById("typeSelect").value;
   
@@ -288,19 +322,21 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
     }
   });
 
-  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, radius, type };
+  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, size, radius: size * 4, type };
+  const newIndex = bodies.length;
   bodies.push(newBody);
-  
+
   await fetch("/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      index: bodies.length,
+      index: newIndex,
       x: newX,
       y: newY,
       vx: 0,
       vy: 0,
       mass: mass,
+      size: size,
       elasticity: elasticity,
       type: type
     })
