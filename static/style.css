@@ -32,6 +32,23 @@ canvas {
   box-shadow: 0 0 20px #0ff;
 }
 
+.type-legend {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.type-legend div {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+.type-normal { background: #fff; }
+.type-heavy { background: #888; }
+.type-bouncy { background: #0f0; }
+.type-sticky { background: #f0f; }
+.type-explosive { background: #f00; }
+
 /* Each group */
 .control-group {
   display: flex;

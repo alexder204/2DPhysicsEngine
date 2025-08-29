@@ -49,7 +49,7 @@ class Vectors:
 
 # --- Body Class ---
 class Body:
-    def __init__(self, position=None, velocity=None, mass=1.0, elasticity=1.0):
+    def __init__(self, position=None, velocity=None, mass=1.0, elasticity=1.0, type="normal"):
         self.position = position or Vectors(0, 0)
         self.velocity = velocity or Vectors(0, 0)
         self.acceleration = Vectors(0, 0)
@@ -57,6 +57,7 @@ class Body:
         self.force = Vectors(0, 0)
         self.radius = self.mass * 4.0
         self.elasticity = elasticity
+        self.type = type
 
     def apply_force(self, f): 
         self.force += f
@@ -102,6 +103,12 @@ class Body:
         self.velocity = (t * v1t) + (n * v1n_prime)
         other.velocity = (t * v2t) + (n * v2n_prime)
 
+        if self.type == "sticky":
+            self.velocity = Vectors(0,0)
+        if other.type == "sticky":
+            other.velocity = Vectors(0,0)
+
+
 # --- Starting Bodies ---
 bodies = [
     Body(position=Vectors(200, 200), mass=8),
@@ -120,7 +127,8 @@ def get_bodies():
         "x": b.position.x,
         "y": b.position.y,
         "mass": b.mass,
-        "radius": b.radius
+        "radius": b.radius,
+        "type": b.type
     } for b in bodies])
 
 # --- Moving Bodies ---
@@ -137,9 +145,11 @@ def move_body():
         if 0 <= idx < len(bodies):
             bodies[idx].position = Vectors(x, y)
             bodies[idx].velocity = Vectors(vx or 0, vy or 0)
+            if "type" in data:
+                bodies[idx].type = data["type"]
         else:
             # Append new body
-            new_body = Body(position=Vectors(x, y), velocity=Vectors(vx or 0, vy or 0), mass=mass, elasticity=elasticity)
+            new_body = Body(position=Vectors(x, y), velocity=Vectors(vx or 0, vy or 0), mass=mass, elasticity=elasticity,type=data.get("type", "normal"))
             bodies.append(new_body)
 
     return jsonify(success=True)
@@ -156,7 +166,20 @@ def step():
     for b in bodies:
         # Apply gravity
         if GRAVITY_ENABLED:
-            b.apply_force(Vectors(0, GRAVITY_FORCE * b.mass))
+            gravity_force = GRAVITY_FORCE * b.mass
+            if DECAY_ENABLED and b.type == "heavy":
+                gravity_force *= 0.7  # heavy falls slower only with momentum loss
+            b.apply_force(Vectors(0, gravity_force))
+
+        if b.type == "heavy":
+            b.elasticity = 0.2
+        if b.type == "bouncy":
+            b.elasticity = 1.2  # constant high elasticity
+        elif b.type == "sticky":
+            b.elasticity = 0  # optional, doesn't matter since velocity is zero
+        else:
+            b.elasticity = DEFAULT_ELASTICITY
+
 
         # Update physics
         b.update(dt)
@@ -195,6 +218,8 @@ def step():
         # Left wall
         if b.position.x - r < 0:
             b.position.x = r
+            if b.type == "sticky":
+                b.velocity = Vectors(0, 0)
             if abs(b.velocity.x) > min_bounce:
                 b.velocity.x = -b.velocity.x * b.elasticity  # ✅ fix
             else:
@@ -203,6 +228,8 @@ def step():
         # Right wall
         if b.position.x + r > CANVAS_WIDTH:
             b.position.x = CANVAS_WIDTH - r
+            if b.type == "sticky":
+                b.velocity = Vectors(0, 0)
             if abs(b.velocity.x) > min_bounce:
                 b.velocity.x = -b.velocity.x * b.elasticity  # ✅ fix
             else:
@@ -213,7 +240,8 @@ def step():
         "x": b.position.x,
         "y": b.position.y,
         "mass": b.mass,
-        "radius": b.radius
+        "radius": b.radius,
+        "type": b.type
     } for b in bodies])
 
 # --- Momentum Toggle Button ---

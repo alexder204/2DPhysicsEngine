@@ -135,6 +135,14 @@ async function loop() {
 
 loop();
 
+const typeColors = {
+    normal: "#fff",    // white
+    heavy: "#888",     // gray
+    bouncy: "#0f0",    // neon green
+    sticky: "#f0f",    // neon magenta
+    explosive: "#f00", // red
+};
+
 // ---- Momentum Button ----
 const decaySlider = document.getElementById("decaySlider");
 document.getElementById("toggleDecay").addEventListener("click", async () => {
@@ -220,7 +228,7 @@ function draw() {
   bodies.forEach((b, i) => {
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = typeColors[b.type] || "#fff";
     ctx.fill();
 
     if (i === selectedIndex) {
@@ -264,6 +272,8 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
   const elasticity = parseFloat(document.getElementById("elasticityInput").value) || 1.0;
   const radius = mass * 4;
 
+  const type = document.getElementById("typeSelect").value;
+  
   // Push out of overlaps
   bodies.forEach(b => {
     const dx = newX - b.x;
@@ -278,20 +288,21 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
     }
   });
 
-  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, radius };
+  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, radius, type };
   bodies.push(newBody);
-
+  
   await fetch("/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      index: bodies.length - 1,
+      index: bodies.length,
       x: newX,
       y: newY,
       vx: 0,
       vy: 0,
       mass: mass,
-      elasticity: elasticity
+      elasticity: elasticity,
+      type: type
     })
   });
 });
