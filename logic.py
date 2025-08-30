@@ -301,6 +301,19 @@ def status():
         "gravity": GRAVITY_ENABLED
     })
 
+# --- Delete Key ---
+@app.route("/delete_object", methods=["POST"])
+def delete_object():
+    global bodies
+    data = request.json
+    idx = data.get("index")
+
+    if idx is None or not (0 <= idx < len(bodies)):
+        return jsonify(success=False, error="Invalid index")
+
+    bodies.pop(idx)
+    return jsonify(success=True)
+
 # --- Set Decay Factor ---
 @app.route("/set_decay_factor", methods=["POST"])
 def set_decay_factor():

@@ -221,6 +221,21 @@ gravitySlider.addEventListener("input", async () => {
   });
 });
 
+// Delete Key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Backspace" && selectedIndex !== null) {
+    fetch("/delete_object", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index: selectedIndex })
+    }).then(() => {
+      selectedIndex = null; // clear selection after delete
+      fetchBodies(); // reload objects from server
+    });
+    e.preventDefault();
+  }
+});
+
 // Elasticity
 const elasticityInput = document.getElementById("elasticityInput");
 elasticityInput.addEventListener("input", async () => {
