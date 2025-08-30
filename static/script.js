@@ -1,22 +1,41 @@
+// ========================================
+// Canvas & Context
+// ========================================
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// ---- Constants ----
-const SPAWN_COOLDOWN_MS = 0; // 2000 ms = 2 second cooldown
+// ========================================
+// Constants
+// ========================================
+const SPAWN_COOLDOWN_MS = 0; // cooldown between spawns (ms)
 
-// ---- State ----
-let bodies = [];
-let initialBodies = [];
-let selectedIndex = null;
-let lastMouse = { x: 0, y: 0 };
+// Colors by object type
+const typeColors = {
+  normal: "#fff",    // white
+  heavy: "#888",     // gray
+  bouncy: "#0f0",    // neon green
+  sticky: "#f0f"     // neon magenta
+};
+
+// ========================================
+// Global State
+// ========================================
+let bodies = [];               // all physics bodies (from server)
+let initialBodies = [];        // snapshot for reset
+let selectedIndex = null;      // index of dragged body
+let lastMouse = { x: 0, y: 0 };// last mouse position (for velocity calc)
 let velocityWhileDragging = { x: 0, y: 0 };
 let spawnCooldown = false;
+let pulseTime = 0;             // glow pulse animation timer
 
-// ---- Fetch and initialize ----
+// ========================================
+// Fetch & Initialization
+// ========================================
 async function fetchBodies() {
   const res = await fetch("/bodies");
   bodies = await res.json();
 
+  // save initial state for reset
   initialBodies = bodies.map(b => ({
     x: b.x,
     y: b.y,
@@ -28,17 +47,20 @@ async function fetchBodies() {
 
   draw();
 }
+fetchBodies();
 
+// ========================================
+// UI Controls: Size
+// ========================================
 const sizeInput = document.getElementById("sizeInput");
-
 sizeInput.addEventListener("input", async () => {
   if (selectedIndex === null) return;
-  const newSize = parseFloat(sizeInput.value);
 
+  const newSize = parseFloat(sizeInput.value);
   bodies[selectedIndex].size = newSize;
   bodies[selectedIndex].radius = newSize * 4;
 
-  // Send to server
+  // sync with server
   await fetch("/set_size", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,9 +70,11 @@ sizeInput.addEventListener("input", async () => {
   draw();
 });
 
-fetchBodies();
+// ========================================
+// Mouse Events (drag & throw)
+// ========================================
 
-// ---- Mouse Click ----
+// Select body
 canvas.addEventListener("mousedown", e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
@@ -73,7 +97,7 @@ canvas.addEventListener("mousedown", e => {
   velocityWhileDragging = { x: 0, y: 0 };
 });
 
-// --- Mouse Move ---
+// Drag body
 canvas.addEventListener("mousemove", e => {
   if (selectedIndex === null) return;
 
@@ -81,14 +105,15 @@ canvas.addEventListener("mousemove", e => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
+  // compute throw velocity
   velocityWhileDragging = { x: x - lastMouse.x, y: y - lastMouse.y };
   lastMouse = { x, y };
 
-  // Update locally for smooth dragging
+  // update locally for smooth dragging
   bodies[selectedIndex].x = x;
   bodies[selectedIndex].y = y;
 
-  // Fire-and-forget server update (async, non-blocking)
+  // async update to server
   fetch("/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -98,14 +123,14 @@ canvas.addEventListener("mousemove", e => {
   draw();
 });
 
-// --- Mouse Unclick ---
-canvas.addEventListener("mouseup", async () => {
+// Release body (apply throw velocity)
+function releaseBody() {
   if (selectedIndex !== null) {
     const throwFactor = 6.0;
     const vx = velocityWhileDragging.x * throwFactor;
     const vy = velocityWhileDragging.y * throwFactor;
 
-    await fetch("/move", {
+    fetch("/move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -115,43 +140,25 @@ canvas.addEventListener("mouseup", async () => {
         vx,
         vy
       })
-    });
+    }).catch(console.error);
   }
+
   selectedIndex = null;
   velocityWhileDragging = { x: 0, y: 0 };
-});
+}
+canvas.addEventListener("mouseup", releaseBody);
+canvas.addEventListener("mouseleave", releaseBody);
 
-// ---- Mouse leave ----
-canvas.addEventListener("mouseleave", async () => {
-  if (selectedIndex !== null) {
-    const throwFactor = 6.0;
-    const vx = velocityWhileDragging.x * throwFactor;
-    const vy = velocityWhileDragging.y * throwFactor;
-
-    await fetch("/move", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        index: selectedIndex,
-        x: bodies[selectedIndex].x,
-        y: bodies[selectedIndex].y,
-        vx,
-        vy
-      })
-    });
-  }
-  selectedIndex = null;
-  velocityWhileDragging = { x: 0, y: 0 };
-});
-
-// ---- Main loop ----
+// ========================================
+// Main Loop (sync with backend simulation)
+// ========================================
 async function loop() {
   try {
     const res = await fetch("/step");
     let serverBodies = await res.json();
 
+    // override with local drag position if dragging
     if (selectedIndex !== null) {
-      // Keep the dragged ball at local position
       serverBodies[selectedIndex].x = bodies[selectedIndex].x;
       serverBodies[selectedIndex].y = bodies[selectedIndex].y;
       serverBodies[selectedIndex].vx = 0;
@@ -163,21 +170,18 @@ async function loop() {
   } catch (e) {
     console.error(e);
   }
+
   requestAnimationFrame(loop);
 }
-
 loop();
 
-const typeColors = {
-    normal: "#fff",    // white
-    heavy: "#888",     // gray
-    bouncy: "#0f0",    // neon green
-    sticky: "#f0f",    // neon magenta
-    explosive: "#f00", // red
-};
-
-// ---- Momentum Button ----
+// ========================================
+// UI Controls: Physics Toggles
+// ========================================
 const decaySlider = document.getElementById("decaySlider");
+const gravitySlider = document.getElementById("gravitySlider");
+
+// Momentum toggle
 document.getElementById("toggleDecay").addEventListener("click", async () => {
   const res = await fetch("/toggle_decay", { method: "POST" });
   const data = await res.json();
@@ -185,12 +189,10 @@ document.getElementById("toggleDecay").addEventListener("click", async () => {
   document.getElementById("decayState").textContent = data.enabled ? "ON" : "OFF";
   document.getElementById("decayState").style.color = data.enabled ? "lime" : "red";
 
-  // Enable/disable slider
   decaySlider.disabled = !data.enabled;
 });
 
-// ---- Gravity Button ----
-const gravitySlider = document.getElementById("gravitySlider");
+// Gravity toggle
 document.getElementById("toggleGravity").addEventListener("click", async () => {
   const res = await fetch("/toggle_gravity", { method: "POST" });
   const data = await res.json();
@@ -198,11 +200,10 @@ document.getElementById("toggleGravity").addEventListener("click", async () => {
   document.getElementById("gravityState").textContent = data.enabled ? "ON" : "OFF";
   document.getElementById("gravityState").style.color = data.enabled ? "lime" : "red";
 
-  // Enable/disable slider
   gravitySlider.disabled = !data.enabled;
 });
 
-// ---- Slider change listeners ----
+// Slider listeners
 decaySlider.addEventListener("input", async () => {
   const value = parseFloat(decaySlider.value);
   await fetch("/set_decay_factor", {
@@ -211,7 +212,6 @@ decaySlider.addEventListener("input", async () => {
     body: JSON.stringify({ slider: value })
   });
 });
-
 gravitySlider.addEventListener("input", async () => {
   const value = parseFloat(gravitySlider.value);
   await fetch("/set_gravity_force", {
@@ -221,6 +221,7 @@ gravitySlider.addEventListener("input", async () => {
   });
 });
 
+// Elasticity
 const elasticityInput = document.getElementById("elasticityInput");
 elasticityInput.addEventListener("input", async () => {
   const value = parseFloat(elasticityInput.value);
@@ -231,13 +232,13 @@ elasticityInput.addEventListener("input", async () => {
   });
 });
 
-// --- Reset Button ---
+// Reset button
 document.getElementById("resetBodies").addEventListener("click", async () => {
   await fetch("/reset_bodies", { method: "POST" });
-  await fetchBodies();  // reload bodies from server
+  await fetchBodies();
 });
 
-// --- Status Of Buttons ---
+// Initial toggle states from server
 async function fetchStatus() {
   const res = await fetch("/status");
   const data = await res.json();
@@ -250,33 +251,35 @@ async function fetchStatus() {
 }
 fetchStatus();
 
-let pulseTime = 0; // global for glow pulse
-
+// ========================================
+// Drawing Function
+// ========================================
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  pulseTime += 0.05; // increase for pulsating effect
-  const pulse = (Math.sin(pulseTime) + 1) / 2; // 0 → 1
+  pulseTime += 0.05;
+  const pulse = (Math.sin(pulseTime) + 1) / 2; // range [0..1]
 
   bodies.forEach((b, i) => {
+    // main fill
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
     ctx.fillStyle = typeColors[b.type] || "#fff";
     ctx.fill();
 
+    // highlight selected body
     if (i === selectedIndex) {
-      // glowing aura
       ctx.save();
       const glowRadius = b.radius + 5 + pulse * 5;
       const gradient = ctx.createRadialGradient(b.x, b.y, b.radius, b.x, b.y, glowRadius);
-      gradient.addColorStop(0, `rgba(255,255,0,0.8)`); // bright center
-      gradient.addColorStop(1, `rgba(255,255,0,0)`);   // fade out
+      gradient.addColorStop(0, "rgba(255,255,0,0.8)");
+      gradient.addColorStop(1, "rgba(255,255,0,0)");
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(b.x, b.y, glowRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      
+
       ctx.strokeStyle = "yellow";
       ctx.lineWidth = 2;
     } else {
@@ -288,7 +291,9 @@ function draw() {
   });
 }
 
-// ---- Spawn object button ----
+// ========================================
+// Spawn Object Button
+// ========================================
 document.getElementById("spawnObject").addEventListener("click", async () => {
   if (spawnCooldown) {
     alert("Wait before spawning another object!");
@@ -298,17 +303,18 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
   spawnCooldown = true;
   setTimeout(() => (spawnCooldown = false), SPAWN_COOLDOWN_MS);
 
+  // random position
   let newX = Math.random() * canvas.width;
   let newY = Math.random() * canvas.height;
-  const massInput = document.getElementById("massInput");
-  const mass = parseFloat(massInput.value) || 10; // default to 10 if input invalid
-  const elasticity = parseFloat(document.getElementById("elasticityInput").value) || 1.0;
-  const size = parseFloat(document.getElementById("sizeInput").value) || 10;
-  const radius = size * 4;
 
+  // read inputs
+  const mass = parseFloat(document.getElementById("massInput").value) || 10;
+  const elasticity = parseFloat(elasticityInput.value) || 1.0;
+  const size = parseFloat(sizeInput.value) || 10;
+  const radius = size * 4;
   const type = document.getElementById("typeSelect").value;
-  
-  // Push out of overlaps
+
+  // prevent spawn overlaps
   bodies.forEach(b => {
     const dx = newX - b.x;
     const dy = newY - b.y;
@@ -322,10 +328,12 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
     }
   });
 
-  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, size, radius: size * 4, type };
+  // create locally
+  const newBody = { x: newX, y: newY, vx: 0, vy: 0, mass, size, radius, type };
   const newIndex = bodies.length;
   bodies.push(newBody);
 
+  // sync with server
   await fetch("/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -335,10 +343,10 @@ document.getElementById("spawnObject").addEventListener("click", async () => {
       y: newY,
       vx: 0,
       vy: 0,
-      mass: mass,
-      size: size,
-      elasticity: elasticity,
-      type: type
+      mass,
+      size,
+      elasticity,
+      type
     })
   });
 });

@@ -13,7 +13,7 @@
       <div class="control-group">
         <button id="toggleDecay">Toggle Momentum Loss</button>
         <span id="decayState">OFF</span>
-        <input type="range" id="decaySlider" min="0.1" max="1" step="0.01" value="0.99" disabled>
+        <input type="range" id="decaySlider" min="0" max="1" step="0.01" value="0.99" disabled>
       </div>
 
       <!-- Gravity -->
@@ -29,6 +29,7 @@
         <input type="number" id="elasticityInput" min="0" max="1" step="0.05" value="1">
       </div>
 
+      <!-- Size -->
       <div class="control-group">
         <label for="sizeInput">Size:</label>
         <input type="number" id="sizeInput" min="1" max="50" step="0.1" value="10">
@@ -42,6 +43,7 @@
         <input type="number" id="massInput" min="1" max="50" value="10">
       </div>
 
+      <!-- Type -->
       <select id="typeSelect">
         <option value="normal">Normal</option>
         <option value="heavy">Heavy</option>

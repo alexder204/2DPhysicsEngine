@@ -8,13 +8,14 @@ CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 600
 
 # --- Momentum ---
-DECAY_ENABLED = False   # default: no momentum loss
-DECAY_FACTOR = 0.99     # tweak: <1.0 means lose velocity each step
+DECAY_ENABLED = False   
+DECAY_FACTOR = 0.99     # <1.0 means lose velocity each step
 
 # --- Gravity ---
 GRAVITY_ENABLED = True
 GRAVITY_FORCE = 9.8
 
+# --- Elascticity ---
 DEFAULT_ELASTICITY = 1.0
 
 # --- Vector Class ---
@@ -47,7 +48,6 @@ class Vectors:
     def __repr__(self):
         return f"V({self.x:.2f},{self.y:.2f})"
 
-
 # --- Body Class ---
 class Body:
     def __init__(self, position=None, velocity=None, mass=1.0, elasticity=1.0, type="normal", size=None):
@@ -56,7 +56,6 @@ class Body:
         self.acceleration = Vectors(0, 0)
         self.mass = float(mass)
         self.force = Vectors(0, 0)
-        # allow size independent of mass; default to mass if not provided
         self.size = float(size) if size is not None else self.mass
         self.radius = self.size * 4.0
         self.elasticity = elasticity
@@ -66,7 +65,6 @@ class Body:
         self.force += f
 
     def update(self, dt=1.0):
-        # protect against zero mass (just in case)
         if self.mass == 0:
             self.acceleration = Vectors(0, 0)
         else:
@@ -75,7 +73,7 @@ class Body:
         self.position += self.velocity * dt
         self.force = Vectors(0, 0)
 
-    def tech_with_tim_resolve(self, other):
+    def check_collision(self, other):
         delta = other.position - self.position
         dist = delta.magnitude()
         if dist == 0:
@@ -90,7 +88,6 @@ class Body:
         t = Vectors(-n.y, n.x)
 
         total_mass = self.mass + other.mass
-        # positional correction proportional to masses
         self.position -= n * (overlap * (other.mass / total_mass))
         other.position += n * (overlap * (self.mass / total_mass))
 
@@ -100,8 +97,6 @@ class Body:
         v2t = other.velocity.dot(t)
 
         m1, m2 = self.mass, other.mass
-
-        # Apply elasticity factor here
         e = (self.elasticity + other.elasticity) / 2.0
 
         v1n_prime = ((v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)) * e
@@ -115,19 +110,12 @@ class Body:
         if other.type == "sticky":
             other.velocity = Vectors(0, 0)
 
-
-# --- Starting Bodies ---
-bodies = [
-    Body(position=Vectors(200, 200), mass=8, size=8),
-    Body(position=Vectors(400, 300), mass=6, size=6),
-    Body(position=Vectors(600, 150), mass=4, size=4),
-]
-
+# --- Bodies ---
+bodies = []
 
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 # --- Keep Information On Bodies ---
 @app.route("/bodies")
@@ -154,17 +142,14 @@ def move_body():
     elasticity = data.get("elasticity", None)
 
     if idx is not None:
-        # if index refers to an existing body -> update it
         if 0 <= idx < len(bodies):
             body = bodies[idx]
-            # update position/velocity (guard None)
             if x is not None and y is not None:
                 body.position = Vectors(x, y)
             if vx is not None or vy is not None:
                 body.velocity = Vectors(vx or 0, vy or 0)
             if "type" in data:
                 body.type = data["type"]
-            # optional updates only when provided
             if mass is not None:
                 body.mass = float(mass)
             if size is not None:
@@ -173,7 +158,6 @@ def move_body():
             if elasticity is not None:
                 body.elasticity = float(elasticity)
         else:
-            # append new body; prefer provided size, fallback to mass
             new_size = float(size) if size is not None else (float(mass) if mass is not None else None)
             new_body = Body(
                 position=Vectors(x, y),
@@ -184,33 +168,29 @@ def move_body():
                 size=new_size
             )
             bodies.append(new_body)
-
     return jsonify(success=True)
-
 
 # --- Update Frames ---
 @app.route("/step")
 def step():
     global bodies, GRAVITY_FORCE, DECAY_FACTOR
     dt = 0.1
-    min_bounce = 0.01  # treat very small velocities as zero
+    min_bounce = 0.01
 
     # Update bodies
     for b in bodies:
-        # Apply gravity
         if GRAVITY_ENABLED:
             gravity_force = GRAVITY_FORCE * b.mass
             if DECAY_ENABLED and b.type == "heavy":
                 gravity_force *= 0.7  # heavy falls slower only with momentum loss
             b.apply_force(Vectors(0, gravity_force))
 
-        # type-based properties
         if b.type == "heavy":
             b.elasticity = 0.2
         if b.type == "bouncy":
             b.elasticity = 1.2  # constant high elasticity
         elif b.type == "sticky":
-            b.elasticity = 0  # optional, doesn't matter since velocity is zero
+            b.elasticity = 0  
         else:
             b.elasticity = DEFAULT_ELASTICITY
 
@@ -222,10 +202,9 @@ def step():
             decay_per_frame = DECAY_FACTOR ** dt
             b.velocity *= decay_per_frame
 
-    # Resolve collisions between bodies
     for i in range(len(bodies)):
         for j in range(i + 1, len(bodies)):
-            bodies[i].tech_with_tim_resolve(bodies[j])
+            bodies[i].check_collision(bodies[j])
 
     # Keep bodies inside canvas
     for b in bodies:
@@ -267,7 +246,7 @@ def step():
             else:
                 b.velocity.x = 0
 
-    # Return updated positions (include size so client can stay authoritative)
+    # Return updated positions
     return jsonify([{
         "x": b.position.x,
         "y": b.position.y,
@@ -277,14 +256,12 @@ def step():
         "type": b.type
     } for b in bodies])
 
-
 # --- Momentum Toggle Button ---
 @app.route("/toggle_decay", methods=["POST"])
 def toggle_decay():
     global DECAY_ENABLED
     DECAY_ENABLED = not DECAY_ENABLED
     return jsonify(enabled=DECAY_ENABLED)
-
 
 # --- Gravity Toggle Button ---
 @app.route("/toggle_gravity", methods=["POST"])
@@ -293,10 +270,8 @@ def toggle_gravity():
     GRAVITY_ENABLED = not GRAVITY_ENABLED
     return jsonify(enabled=GRAVITY_ENABLED)
 
-
-# Keep a copy of initial bodies (preserve size)
+# Keep a copy of initial bodies
 initial_bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass, size=getattr(b, "size", b.radius / 4.0)) for b in bodies]
-
 
 # --- Reset Button ---
 @app.route("/reset_bodies", methods=["POST"])
@@ -305,7 +280,7 @@ def reset_bodies():
     bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass, size=getattr(b, "size", b.radius / 4.0)) for b in initial_bodies]
     return jsonify(success=True)
 
-
+# --- Set Size ---
 @app.route("/set_size", methods=["POST"])
 def set_size():
     data = request.get_json()
@@ -318,7 +293,6 @@ def set_size():
 
     return jsonify(success=True, size=new_size)
 
-
 # --- Status Of Buttons ---
 @app.route("/status")
 def status():
@@ -327,19 +301,17 @@ def status():
         "gravity": GRAVITY_ENABLED
     })
 
-
 # --- Set Decay Factor ---
 @app.route("/set_decay_factor", methods=["POST"])
 def set_decay_factor():
     global DECAY_FACTOR
     data = request.json
-    slider_value = float(data.get("slider", 0))  # get the slider from the request
+    slider_value = float(data.get("slider", 0))
 
-    # Map slider to decay factor (0 = no decay, 1 = max decay)
-    DECAY_FACTOR = 0.99 - slider_value * 0.1  # tweak 0.05 for max per-frame decay
+    # 0 = no decay, 1 = max decay
+    DECAY_FACTOR = 1 - slider_value * 0.1  # tweak last number for max per-frame decay
 
     return jsonify(success=True, factor=DECAY_FACTOR)
-
 
 # --- Set Gravity Force ---
 @app.route("/set_gravity_force", methods=["POST"])
@@ -349,7 +321,7 @@ def set_gravity_force():
     GRAVITY_FORCE = float(data.get("gravity", 9.8))
     return jsonify(success=True, gravity=GRAVITY_FORCE)
 
-
+# --- Set Elasticity ---
 @app.route("/set_elasticity", methods=["POST"])
 def set_elasticity():
     global DEFAULT_ELASTICITY
@@ -361,7 +333,6 @@ def set_elasticity():
         return jsonify({"status": "ok", "default_elasticity": DEFAULT_ELASTICITY})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
-
 
 if __name__ == "__main__":
     app.run(debug=True)
