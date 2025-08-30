@@ -7,26 +7,26 @@ const ctx = canvas.getContext("2d");
 // ========================================
 // Constants
 // ========================================
-const SPAWN_COOLDOWN_MS = 0; // cooldown between spawns (ms)
+const SPAWN_COOLDOWN_MS = 0; 
 
 // Colors by object type
 const typeColors = {
-  normal: "#fff",    // white
-  heavy: "#888",     // gray
-  bouncy: "#0f0",    // neon green
-  sticky: "#f0f"     // neon magenta
+  normal: "#fff",   
+  heavy: "#888",    
+  bouncy: "#0f0",    
+  sticky: "#f0f"    
 };
 
 // ========================================
 // Global State
 // ========================================
-let bodies = [];               // all physics bodies (from server)
-let initialBodies = [];        // snapshot for reset
-let selectedIndex = null;      // index of dragged body
-let lastMouse = { x: 0, y: 0 };// last mouse position (for velocity calc)
+let bodies = [];               
+let initialBodies = [];       
+let selectedIndex = null;     
+let lastMouse = { x: 0, y: 0 };
 let velocityWhileDragging = { x: 0, y: 0 };
 let spawnCooldown = false;
-let pulseTime = 0;             // glow pulse animation timer
+let pulseTime = 0;             
 
 // ========================================
 // Fetch & Initialization
