@@ -1,58 +1,59 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <title>Physics Grab Demo</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-  <div id="container">
-    <canvas id="canvas" width="800" height="600"></canvas>
-    <div id="controls">
-      <!-- Momentum -->
-      <div class="control-group">
-        <button id="toggleDecay">Toggle Momentum Loss</button>
-        <span id="decayState">OFF</span>
-        <input type="range" id="decaySlider" min="0" max="1" step="0.01" value="0.99" disabled>
+  <head>
+    <meta charset="utf-8" />
+    <title>Physics Grab Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+  </head>
+  <body>
+    <main>
+      <div id="container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+        <div id="controls">
+          <!-- Momentum -->
+          <div class="control-group">
+            <button id="toggleDecay">Toggle Momentum Loss</button>
+            <span id="decayState">OFF</span>
+            <input type="range" id="decaySlider" min="0" max="1" step="0.01" value="0.99" disabled>
+          </div>
+
+          <!-- Gravity -->
+          <div class="control-group">
+            <button id="toggleGravity">Toggle Gravity</button>
+            <span id="gravityState">ON</span>
+            <input type="range" id="gravitySlider" min="0" max="20" step="0.1" value="9.8">
+          </div>
+
+          <!-- Elasticity -->
+          <div class="control-group">
+            <label for="elasticityInput">Collision Elasticity (0-1):</label>
+            <input type="number" id="elasticityInput" min="0" max="1" step="0.05" value="1">
+          </div>
+
+          <!-- Size -->
+          <div class="control-group">
+            <label for="sizeInput">Size:</label>
+            <input type="number" id="sizeInput" min="1" max="50" step="0.1" value="10">
+          </div>
+
+          <!-- Spawn / Reset -->
+          <div class="control-group">
+            <button id="spawnObject">Spawn New Object</button>
+            <button id="resetBodies">Reset</button>
+            <label for="massInput">Spawn Mass:</label>
+            <input type="number" id="massInput" min="1" max="50" value="10">
+          </div>
+
+          <!-- Type -->
+          <select id="typeSelect">
+            <option value="normal">Normal</option>
+            <option value="heavy">Heavy</option>
+            <option value="bouncy">Bouncy</option>
+            <option value="sticky">Sticky</option>
+          </select>
+        </div>
       </div>
-
-      <!-- Gravity -->
-      <div class="control-group">
-        <button id="toggleGravity">Toggle Gravity</button>
-        <span id="gravityState">ON</span>
-        <input type="range" id="gravitySlider" min="0" max="20" step="0.1" value="9.8">
-      </div>
-
-      <!-- Elasticity -->
-      <div class="control-group">
-        <label for="elasticityInput">Collision Elasticity (0-1):</label>
-        <input type="number" id="elasticityInput" min="0" max="1" step="0.05" value="1">
-      </div>
-
-      <!-- Size -->
-      <div class="control-group">
-        <label for="sizeInput">Size:</label>
-        <input type="number" id="sizeInput" min="1" max="50" step="0.1" value="10">
-      </div>
-
-      <!-- Spawn / Reset -->
-      <div class="control-group">
-        <button id="spawnObject">Spawn New Object</button>
-        <button id="resetBodies">Reset</button>
-        <label for="massInput">Spawn Mass:</label>
-        <input type="number" id="massInput" min="1" max="50" value="10">
-      </div>
-
-      <!-- Type -->
-      <select id="typeSelect">
-        <option value="normal">Normal</option>
-        <option value="heavy">Heavy</option>
-        <option value="bouncy">Bouncy</option>
-        <option value="sticky">Sticky</option>
-      </select>
-    </div>
-  </div>
-
-  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
-</body>
+    </main>
+  </body>
 </html>
