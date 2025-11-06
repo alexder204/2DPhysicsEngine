@@ -20,5 +20,5 @@ Built as part of a learning project to understand physics simulation fundamental
 ## 🌐 Live Demo
 
 The site has been deployed using Render and can be accessed here:
-[2DPhysicsEngine](https://twodphysicsengine.onrender.com). 
+[2DPhysicsEngine](https://twodphysicsengine.onrender.com).\
 Note: Performance may be slow due to free hosting limitations.
