@@ -13,8 +13,8 @@ This project demonstrates an understanding of physics concepts, vector math, and
 
 ## Author
 
-Alex D.
-Student at Dawson College – Computer Science & Math
+Alexander Derderian.
+Student at Dawson College – Science, Computer Science & Mathematics
 Built as part of a learning project to understand physics simulation fundamentals.
 
 ## 🌐 Live Demo
