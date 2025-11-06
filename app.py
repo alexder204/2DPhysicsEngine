@@ -346,3 +346,6 @@ def set_elasticity():
         return jsonify({"status": "ok", "default_elasticity": DEFAULT_ELASTICITY})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+    
+if __name__ == "__main__":
+    app.run()
