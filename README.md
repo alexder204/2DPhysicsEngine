@@ -3,7 +3,6 @@
 ## Overview
 A **2D physics engine** built with **Python** that simulates physical interactions such as motion, gravity, and collisions between objects.  
 There are multiple object types included.  
-This project demonstrates an understanding of **physics concepts**, **vector math**, and **object-oriented programming**.
 
 ---
 
@@ -11,7 +10,7 @@ This project demonstrates an understanding of **physics concepts**, **vector mat
 - **Object motion** based on velocity and acceleration  
 - **Gravity simulation**  
 - **Elastic collisions** between circular objects  
-- **Boundary constraints** — objects bounce off screen edges  
+- **Boundary constraints** objects bounce off screen edges  
 - **Customizable parameters:** mass, friction, restitution, and more  
 
 ---
@@ -24,19 +23,18 @@ Built as part of a learning project to understand **physics simulation fundament
 
 ---
 
-## 🌐 Live Demo
-The site has been deployed using **Render** and can be accessed here:  
-🔗 [2DPhysicsEngine](https://twodphysicsengine.onrender.com)  
+## Live Demo
+The site has been deployed using **Render** and can be accessed here: [2DPhysicsEngine](https://twodphysicsengine.onrender.com)  
 
-> ⚠️ **Note:** Performance may be slow due to free hosting limitations.
+- **Note:** Performance may be slow due to free hosting limitations.
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 - Python  
 - Flask  
 - HTML / CSS / JavaScript  
 
 
-## 🏁 License
+## License
 This project is open-source and available under the **MIT License**.

@@ -3,22 +3,22 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-# --- Gamezone ---
+# Gamezone
 CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 600
 
-# --- Momentum ---
-DECAY_ENABLED = False   
-DECAY_FACTOR = 0.99     # <1.0 means lose velocity each step
+# Momentum
+DECAY_ENABLED = False
+DECAY_FACTOR = 0.99
 
-# --- Gravity ---
+# Gravity
 GRAVITY_ENABLED = True
 GRAVITY_FORCE = 9.8
 
-# --- Elascticity ---
+# Elascticity
 DEFAULT_ELASTICITY = 1.0
 
-# --- Vector Class ---
+# Vector Class
 class Vectors:
     def __init__(self, x=0, y=0):
         self.x, self.y = x, y
@@ -48,7 +48,7 @@ class Vectors:
     def __repr__(self):
         return f"V({self.x:.2f},{self.y:.2f})"
 
-# --- Body Class ---
+# Body Class
 class Body:
     def __init__(self, position=None, velocity=None, mass=1.0, elasticity=1.0, type="normal", size=None):
         self.position = position or Vectors(0, 0)
@@ -110,14 +110,14 @@ class Body:
         if other.type == "sticky":
             other.velocity = Vectors(0, 0)
 
-# --- Bodies ---
+# Bodies
 bodies = []
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# --- Keep Information On Bodies ---
+# Info on bodies
 @app.route("/bodies")
 def get_bodies():
     return jsonify([{
@@ -130,7 +130,7 @@ def get_bodies():
     } for b in bodies])
 
 
-# --- Moving Bodies ---
+# Moving Bodies
 @app.route("/move", methods=["POST"])
 def move_body():
     data = request.json
@@ -170,31 +170,31 @@ def move_body():
             bodies.append(new_body)
     return jsonify(success=True)
 
-# --- Update Frames ---
+# Update Frames
 @app.route("/step")
 def step():
     global bodies, GRAVITY_FORCE, DECAY_FACTOR
     dt = 0.1
     min_bounce = 0.01
 
-    # Update bodies
+    # Update the bodies
     for b in bodies:
         if GRAVITY_ENABLED:
             gravity_force = GRAVITY_FORCE * b.mass
             if DECAY_ENABLED and b.type == "heavy":
-                gravity_force *= 0.7  # heavy falls slower only with momentum loss
+                gravity_force *= 0.7
             b.apply_force(Vectors(0, gravity_force))
 
         if b.type == "heavy":
             b.elasticity = 0.2
         if b.type == "bouncy":
-            b.elasticity = 1.2  # constant high elasticity
+            b.elasticity = 1.2
         elif b.type == "sticky":
             b.elasticity = 0  
         else:
             b.elasticity = DEFAULT_ELASTICITY
 
-        # Update physics
+        # Update the physics
         b.update(dt)
 
         # Apply momentum decay
@@ -256,14 +256,14 @@ def step():
         "type": b.type
     } for b in bodies])
 
-# --- Momentum Toggle Button ---
+# Momentum Toggle Button
 @app.route("/toggle_decay", methods=["POST"])
 def toggle_decay():
     global DECAY_ENABLED
     DECAY_ENABLED = not DECAY_ENABLED
     return jsonify(enabled=DECAY_ENABLED)
 
-# --- Gravity Toggle Button ---
+# Gravity Toggle Button
 @app.route("/toggle_gravity", methods=["POST"])
 def toggle_gravity():
     global GRAVITY_ENABLED
@@ -273,14 +273,14 @@ def toggle_gravity():
 # Keep a copy of initial bodies
 initial_bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass, size=getattr(b, "size", b.radius / 4.0)) for b in bodies]
 
-# --- Reset Button ---
+# Reset Button
 @app.route("/reset_bodies", methods=["POST"])
 def reset_bodies():
     global bodies
     bodies = [Body(position=Vectors(b.position.x, b.position.y), mass=b.mass, size=getattr(b, "size", b.radius / 4.0)) for b in initial_bodies]
     return jsonify(success=True)
 
-# --- Set Size ---
+# Set Size
 @app.route("/set_size", methods=["POST"])
 def set_size():
     data = request.get_json()
@@ -293,7 +293,7 @@ def set_size():
 
     return jsonify(success=True, size=new_size)
 
-# --- Status Of Buttons ---
+# Status Of Buttons
 @app.route("/status")
 def status():
     return jsonify({
@@ -301,7 +301,7 @@ def status():
         "gravity": GRAVITY_ENABLED
     })
 
-# --- Delete Key ---
+# Delete Key
 @app.route("/delete_object", methods=["POST"])
 def delete_object():
     global bodies
@@ -314,7 +314,7 @@ def delete_object():
     bodies.pop(idx)
     return jsonify(success=True)
 
-# --- Set Decay Factor ---
+# Set Decay Factor
 @app.route("/set_decay_factor", methods=["POST"])
 def set_decay_factor():
     global DECAY_FACTOR
@@ -322,11 +322,11 @@ def set_decay_factor():
     slider_value = float(data.get("slider", 0))
 
     # 0 = no decay, 1 = max decay
-    DECAY_FACTOR = 1 - slider_value * 0.1  # tweak last number for max per-frame decay
+    DECAY_FACTOR = 1 - slider_value * 0.1
 
     return jsonify(success=True, factor=DECAY_FACTOR)
 
-# --- Set Gravity Force ---
+# Set Gravity Force
 @app.route("/set_gravity_force", methods=["POST"])
 def set_gravity_force():
     global GRAVITY_FORCE
@@ -334,7 +334,7 @@ def set_gravity_force():
     GRAVITY_FORCE = float(data.get("gravity", 9.8))
     return jsonify(success=True, gravity=GRAVITY_FORCE)
 
-# --- Set Elasticity ---
+# Set Elasticity
 @app.route("/set_elasticity", methods=["POST"])
 def set_elasticity():
     global DEFAULT_ELASTICITY
